@@ -1,18 +1,22 @@
 import streamlit as st
 from transformers import pipeline
 
-# QnA pipeline (for college related info)
-qa = pipeline("question-answering", model="distilbert-base-cased-distilled-squad")
+# QnA pipeline
+qa = pipeline("question-answering", model="deepset/roberta-base-squad2")
 
-# Text generation pipeline (for general questions)
+# Text generation pipeline
 generator = pipeline("text-generation", model="gpt2")
 
-st.set_page_config(page_title="Hybrid AI Chatbot", page_icon="🤖")
-st.title("🤖 Hybrid AI Chatbot")
+# Chat history
+if "history" not in st.session_state:
+    st.session_state.history = []
 
-st.write("Hi! I am your chatbot. Ask me anything about college or general questions.")
+st.set_page_config(page_title="Advanced AI Chatbot", page_icon="🤖")
+st.title("🤖 Advanced AI Chatbot")
 
-# College context
+st.write("Ask me anything in English or Marathi about college or general topics!")
+
+# Context
 context = """
 Our college is located in Mumbai.
 The library is open from 9 AM to 7 PM.
@@ -28,11 +32,21 @@ The canteen serves food from 9 AM to 5 PM.
 user = st.text_input("You: ")
 
 if user:
-    # Simple rule: if question contains college keywords → use QnA
+    st.session_state.history.append(("You", user))
     college_keywords = ["exam", "fees", "library", "placement", "college", "canteen", "principal"]
+
     if any(word in user.lower() for word in college_keywords):
         answer = qa(question=user, context=context)
-        st.success(f"Bot: {answer['answer']}")
+        bot_reply = answer["answer"]
     else:
-        response = generator(user, max_length=50, num_return_sequences=1)
-        st.success("Bot: " + response[0]['generated_text'])
+        response = generator(user, max_length=60, num_return_sequences=1)
+        bot_reply = response[0]["generated_text"]
+
+    st.session_state.history.append(("Bot", bot_reply))
+
+# Display chat history
+for sender, msg in st.session_state.history:
+    if sender == "You":
+        st.markdown(f"**🧑 You:** {msg}")
+    else:
+        st.markdown(f"**🤖 Bot:** {msg}")
