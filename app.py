@@ -1,52 +1,30 @@
 import streamlit as st
-from transformers import pipeline
+import sqlite3
 
-# QnA pipeline
-qa = pipeline("question-answering", model="deepset/roberta-base-squad2")
+st.set_page_config(page_title="🎓 College Chatbot", page_icon="🎓", layout="centered")
 
-# Text generation pipeline
-generator = pipeline("text-generation", model="gpt2")
+st.markdown("<h1 style='text-align: center; color: darkblue;'>🎓 College Chatbot</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>Search student info easily</p>", unsafe_allow_html=True)
+st.write("---")
 
-# Chat history
-if "history" not in st.session_state:
-    st.session_state.history = []
+roll = st.text_input("Enter Roll Number", placeholder="Type Roll Number here")
+search_btn = st.button("🔍 Search")
 
-st.set_page_config(page_title="Advanced AI Chatbot", page_icon="🤖")
-st.title("🤖 Advanced AI Chatbot")
+def get_student(roll_no):
+    conn = sqlite3.connect("college.db")
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM students WHERE roll_no=?", (roll_no,))
+    student = cur.fetchone()
+    conn.close()
+    return student
 
-st.write("Ask me anything in English or Marathi about college or general topics!")
-
-# Context
-context = """
-Our college is located in Mumbai.
-The library is open from 9 AM to 7 PM.
-Exams will start from 15th November.
-Fees can be paid online through the student portal.
-Placements are available for IT, Computer, and Electronics students.
-Top recruiters include TCS, Infosys, and Wipro.
-The principal of the college is Dr. Sharma.
-The canteen serves food from 9 AM to 5 PM.
-"""
-
-# User input
-user = st.text_input("You: ")
-
-if user:
-    st.session_state.history.append(("You", user))
-    college_keywords = ["exam", "fees", "library", "placement", "college", "canteen", "principal"]
-
-    if any(word in user.lower() for word in college_keywords):
-        answer = qa(question=user, context=context)
-        bot_reply = answer["answer"]
+if search_btn:
+    student = get_student(roll)
+    if student:
+        st.success(f"✅ Student Found!")
+        st.markdown(f"**Name:** {student[1]}")
+        st.markdown(f"**Roll No:** {student[0]}")
+        st.markdown(f"**Course:** {student[2]}")
+        st.markdown(f"**Year:** {student[3]}")
     else:
-        response = generator(user, max_length=60, num_return_sequences=1)
-        bot_reply = response[0]["generated_text"]
-
-    st.session_state.history.append(("Bot", bot_reply))
-
-# Display chat history
-for sender, msg in st.session_state.history:
-    if sender == "You":
-        st.markdown(f"**🧑 You:** {msg}")
-    else:
-        st.markdown(f"**🤖 Bot:** {msg}")
+        st.error("❌ No record found")
